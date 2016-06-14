@@ -1,7 +1,7 @@
 {
   "clang": false,
   "args": {
-    "cmake": ["-DDSLINK_BUILD_BROKER=ON", "-DCMAKE_BUILD_TYPE=DEBUG"]
+    "cmake": ["-DDSLINK_BUILD_BROKER=ON", "-DCMAKE_BUILD_TYPE=DEBUG", "-DCMAKE_EXE_LINKER_FLAGS=-static-libasan"]
   },
   "dists": {
     "broker": "{TARGET_UNDERSCORE}_broker"
