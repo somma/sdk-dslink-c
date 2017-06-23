@@ -48,13 +48,11 @@ void init(DSLink *link) {
     // //  broker 로 전송하지는 않는다. 
     // //      
     // dslink_node_add_child(link, stringValueNode);    
-    //responder_init_replicator(link, superRoot);
-
-    
+    responder_init_replicator(link, superRoot);    
     eip_responder_init(link, superRoot);
     
     //responder_init_rng(link, superRoot);
-    //responder_init_invoke(link, superRoot);
+    responder_init_invoke(link, superRoot);
 
     // add link data
     // json_t * linkData = json_object();

@@ -60,10 +60,43 @@ invoke_new_connection(
     //
     //  응답 데이터 전송
     // 
+    /*
 
-    //
-    //  todo - 필요한 응답데이터 구성해서 전송하기 
-    // 
+            {
+                "rid": 1,
+                "stream": "closed",
+                "columns": [
+                    {"name": "result", "type": "string", "meta": { "test": true, "unit": "F" } }
+                ],
+                "updates": [
+                    ["dsaisawesome"]
+                ]
+            }
+
+
+                            
+            {
+                "rid": 7,
+                "columns": [
+                    {
+                    "name": "ip",
+                    "type": "string"
+                    },
+                    {
+                    "name": "host",
+                    "type": "string"
+                    }
+                ],
+                "stream": "closed",
+                "updates": [
+                    [
+                    "ip",
+                    "host"
+                    ]
+                ]
+            }
+
+    */
     json_t *top = json_object();
     if (!top) {
         return;
@@ -81,13 +114,20 @@ invoke_new_connection(
         return;
     }
     json_t *updates = json_array();
-    json_t *update = json_array();
+    
+
+    //
+    //  ip/host
+    //  todo 응답 데이터 구성이 잘못된것 같은데 테스트 필요
+    // 
+    json_t* update = json_array();
     json_array_append_new(updates, update);
+    json_array_append_new(update, json_string("ip"));
+    json_array_append_new(update, json_string("host"));
 
-    json_t *msg = json_incref(json_object_get(params, "input"));
 
-    json_array_append_new(update, msg);
     json_object_set_new_nocheck(resp, "updates", updates);
+
     json_array_append_new(resps, resp);
 
     json_object_set_new_nocheck(resp, "stream", json_string("closed"));
@@ -145,31 +185,58 @@ void eip_responder_init(DSLink *link, DSNode *root) {
     }
 
     new_connection->on_invocation = invoke_new_connection;
-    dslink_node_set_meta(link, new_connection, "$name", json_string("new"));
+    dslink_node_set_meta(link, new_connection, "$name", json_string("Add New Host"));
     dslink_node_set_meta(link, new_connection, "$invokable", json_string("read"));
 
     //
     //  action 의 response stream 구조를 정의한다. 
     //  
     json_t *columns = json_array();
-    json_t *message_row = json_object();
-    json_object_set_new(message_row, "name", json_string("ip"));
-    json_object_set_new(message_row, "type", json_string("string"));
-    json_object_set_new(message_row, "name", json_string("host"));
-    json_object_set_new(message_row, "type", json_string("string"));
+    json_t *column_ip = json_object();
+    json_object_set_new(column_ip, "name", json_string("ip"));
+    json_object_set_new(column_ip, "type", json_string("string"));
+    json_array_append_new(columns, column_ip);
 
-    json_array_append_new(columns, message_row);
+    json_t *column_host = json_object();
+    json_object_set_new(column_host, "name", json_string("host"));
+    json_object_set_new(column_host, "type", json_string("string"));    
+    json_array_append_new(columns, column_host);
+
+    // #ifdef MYDBG
+    // {
+    //     char* data = json_dumps(columns, JSON_INDENT(2));
+    //     log_info("columns = %s \n", data);
+    //     dslink_free(data);
+    // }
+    // #endif//MYDBG
+
 
     //
     //  invoke 파라미터를 정의한다. 
     // 
     json_t *params = json_array();
-    json_t *message_param = json_object();
-    json_object_set_new(message_param, "name", json_string("ip"));
-    json_object_set_new(message_param, "type", json_string("string"));        
-    json_object_set_new(message_param, "name", json_string("host"));
-    json_object_set_new(message_param, "type", json_string("string"));            
-    json_array_append_new(params, message_param);
+    json_t *param_ip = json_object();
+
+    /// IP
+    json_object_set_new(param_ip, "name", json_string("ip"));
+    json_object_set_new(param_ip, "type", json_string("string"));            
+    json_array_append_new(params, param_ip);
+
+    /// Host name
+    json_t *param_host = json_object();
+    json_object_set_new(param_host, "name", json_string("host"));
+    json_object_set_new(param_host, "type", json_string("string"));    
+    json_array_append_new(params, param_host);
+
+
+    // #ifdef MYDBG
+    // {
+    //     char* data = json_dumps(params, JSON_INDENT(2));
+    //     log_info("params = %s \n", data);
+    //     dslink_free(data);
+    // }
+    // #endif//MYDBG
+
 
     dslink_node_set_meta(link, new_connection, "$columns", columns);
     dslink_node_set_meta(link, new_connection, "$params", params);
