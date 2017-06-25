@@ -35,6 +35,14 @@ void invoke_send_one_row(DSLink *link, DSNode *node,
 
     json_object_set_new_nocheck(resp, "stream", json_string("closed"));
     json_object_set_nocheck(resp, "rid", rid);
+
+    #ifdef MYDBG
+    {
+        char* data = json_dumps(top, JSON_INDENT(2));
+        log_info ("resps = \n%s \n", data);
+        dslink_free(data);
+    }
+    #endif//MYDBG
     dslink_ws_send_obj((struct wslay_event_context *) link->_ws, top);
     json_delete(top);
 }
@@ -76,11 +84,7 @@ void invoke_send_echo(DSLink *link, DSNode *node,
 
     #ifdef MYDBG
     {
-        char *data = json_dumps(params, JSON_INDENT(2));
-        log_info("params = \n%s \n", data);
-        dslink_free(data);
-
-        data = json_dumps(resp, JSON_INDENT(2));
+        char* data = json_dumps(top, JSON_INDENT(2));
         log_info ("resps = \n%s \n", data);
         dslink_free(data);
     }
@@ -125,6 +129,15 @@ void invoke_send_multiple_rows(DSLink *link, DSNode *node,
 
     json_object_set_new_nocheck(resp, "stream", json_string("closed"));
     json_object_set_nocheck(resp, "rid", rid);
+
+    #ifdef MYDBG
+    {
+        char* data = json_dumps(top, JSON_INDENT(2));
+        log_info ("resps = \n%s \n", data);
+        dslink_free(data);
+    }
+    #endif//MYDBG
+
     dslink_ws_send_obj((struct wslay_event_context *) link->_ws, top);
     json_delete(top);
 }
@@ -167,6 +180,16 @@ void invoke_send_multiple_rows_multiple_updates(DSLink *link, DSNode *node,
         if (x == 50) {
             json_object_set_new_nocheck(resp, "stream", json_string("closed"));
         }
+
+        #ifdef MYDBG
+        {
+            char* data = json_dumps(top, JSON_INDENT(2));
+            log_info ("resps = \n%s \n", data);
+            dslink_free(data);
+        }
+        #endif//MYDBG
+        
+                
         dslink_ws_send_obj((struct wslay_event_context *) link->_ws, top);
         json_delete(top);
     }

@@ -101,15 +101,15 @@ void invoke_replicator_reset(DSLink *link) {
     configure_request(streamInvokeRef);
 }
 
-/// @brief  EIP-Responder/connections/new action 을 호출한다. 
-void invoke_connections_new(DSLink *link, const char* ip, const char* host) {
+/// @brief  EIP-Responder/new action 을 호출한다. 
+void invoke_connections_new(DSLink *link, const char* ip, const char* port) {
     json_t *params = json_object();
     json_object_set_new(params, "ip", json_string(ip));    
-    json_object_set_new(params, "host", json_string(host));    
+    json_object_set_new(params, "port", json_string(port));    
 
     streamInvokeRef = dslink_requester_invoke(
             link,
-            "/downstream/EIP-Responder/connections/new",
+            "/downstream/EIP-Responder/new",
             params,
             on_invoke_updates
     );
@@ -187,8 +187,8 @@ void requester_ready(DSLink *link) {
     //configure_request(dslink_requester_list(link, "/", on_list_update));    
     //configure_request(dslink_requester_list(link, "/downstream", on_list_update));        
     //configure_request(dslink_requester_list(link, "/downstream/EIP-Responder", on_list_update));
-    configure_request(dslink_requester_list(link, "/downstream/EIP-Responder/replicator", on_list_update));
-    configure_request(dslink_requester_list(link, "/downstream/EIP-Responder/replicator/reset", on_list_update));
+    // configure_request(dslink_requester_list(link, "/downstream/EIP-Responder/replicator", on_list_update));
+    // configure_request(dslink_requester_list(link, "/downstream/EIP-Responder/replicator/reset", on_list_update));
     configure_request(dslink_requester_list(link, "/downstream/EIP-Responder/connections", on_list_update));
     
     // configure_request(dslink_requester_subscribe(
@@ -202,10 +202,10 @@ void requester_ready(DSLink *link) {
     //start_stream_invoke(link);
     //invoke_echo(link);
     //invoke_replicator_reset(link);
-    invoke_connections_new(link, "1.1.1.1", "host01");
-    invoke_connections_new(link, "1.1.1.2", "host02");
-    invoke_connections_new(link, "1.1.1.3", "host03");
-    invoke_connections_new(link, "1.1.1.4", "host04");
+    invoke_connections_new(link, "1.1.1.1", "1");
+    invoke_connections_new(link, "1.1.1.2", "2");
+    invoke_connections_new(link, "1.1.1.3", "3");
+    invoke_connections_new(link, "1.1.1.4", "4");
     
 
     
@@ -215,7 +215,7 @@ void requester_ready(DSLink *link) {
     // uv_timer_start(timer, on_timer_fire, 0, 2000);    
 
 
-    configure_request(dslink_requester_list(link, "/downstream/EIP-Responder/connections/new", on_list_update));
+    configure_request(dslink_requester_list(link, "/downstream/EIP-Responder/connections", on_list_update));
 }
 
 

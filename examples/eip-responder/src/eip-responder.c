@@ -1,5 +1,6 @@
 #define LOG_TAG "eip-responder"
-
+#include <string.h>
+#include <stdio.h>
 #include <dslink/log.h>
 #include <dslink/ws.h>
 #include "eip-responder.h"
@@ -19,125 +20,140 @@ invoke_new_connection(
     //  params 에서 ip, host 정보를 추출하고, child 노드를 생성한다.
     // 
     const char* ip = json_string_value(json_object_get(params, "ip"));
-    const char* host = json_string_value(json_object_get(params, "host"));
+    const char* host = json_string_value(json_object_get(params, "port"));
     if (NULL == ip || NULL== host)
     {
-        // 
-        //  todo , 에러 메세지 응답하기 
-        // 
         log_warn("Invalid params. \n");
         return;
     }
 
     //
     //  /downstream/EIP-Responder/connections/ 아래에 child node 를 생성한다.
+    //  현재 노드는 /EIP-Responder/new 이다. 
     //  동일한 이름의 호스트가 존재하면 생성하지 않는다. 
     // 
-    DSNode* parent = node->parent;
-    if (!(parent->children && dslink_map_contains(parent->children, (char*)host))) 
-    {
-        DSNode* new_host = dslink_node_create(parent, host, "node");
-        if (NULL == new_host)
-        {
-            log_warn("Failed to create the connections node\n");
-            return;
-        }
+    char host_name[32] = {0};
+    sprintf(host_name, "host_%s", ip);
 
-        if (dslink_node_add_child(link, new_host) != 0) 
+
+    DSNode* root = node->parent;
+    ref_t* ref = dslink_map_get(root->children, "connections");
+    if (NULL == ref)
+    {
+        log_warn("No connections node.");
+        return;
+    }
+    
+    DSNode* connections = ref->data;    
+    {
+        if (!(connections->children && dslink_map_contains(connections->children, (char*)ip))) 
         {
-            log_warn("Failed to add the new_host node to the connections\n");
-            dslink_node_tree_free(link, new_host);
-            return;
+            DSNode* new_host = dslink_node_create(connections, host_name, "node");
+            if (NULL == new_host)
+            {
+                log_warn("Failed to create the connections node\n");
+                return;
+            }
+
+            if (dslink_node_add_child(link, new_host) != 0) 
+            {
+                log_warn("Failed to add the new_host node to the connections\n");
+                dslink_node_tree_free(link, new_host);
+                return;
+            }
         }
     }
 
-
-    // 
-    //  노드 메타데이터 설정 등등...
-    // 
-
-
     //
     //  응답 데이터 전송
-    // 
-    /*
-
-            {
-                "rid": 1,
-                "stream": "closed",
-                "columns": [
-                    {"name": "result", "type": "string", "meta": { "test": true, "unit": "F" } }
-                ],
-                "updates": [
-                    ["dsaisawesome"]
-                ]
-            }
-
-
-                            
-            {
-                "rid": 7,
-                "columns": [
-                    {
-                    "name": "ip",
-                    "type": "string"
-                    },
-                    {
-                    "name": "host",
-                    "type": "string"
-                    }
-                ],
-                "stream": "closed",
-                "updates": [
-                    [
-                    "ip",
-                    "host"
-                    ]
-                ]
-            }
-
-    */
+    //  https://github.com/IOT-DSA/docs/wiki/Node-API#responses 참고
+    //
+    // {
+    //     "msg": 18,
+    //     "responses": [
+    //         {
+    //             "rid": 2,
+    //             "stream": "open",
+    //             "columns": [
+    //                 {
+    //                     "name": "ip",
+    //                     "type": "string"
+    //                 },
+    //                 {
+    //                     "name": "host",
+    //                     "type": "string"
+    //                 }
+    //             ],
+    //             "updates": [
+    //                 [
+    //                     "1.1.1.1",
+    //                     "host01"
+    //                 ]
+    //             ]
+    //         }
+    //     ]
+    // }
     json_t *top = json_object();
     if (!top) {
         return;
     }
-    json_t *resps = json_array();
-    if (!resps) {
-        json_delete(top);
-        return;
-    }
-    json_object_set_new_nocheck(top, "responses", resps);
 
-    json_t *resp = json_object();
-    if (!resp) {
-        json_delete(top);
-        return;
-    }
-    json_t *updates = json_array();
-    
+    json_t *responses = json_array();
+    if (!responses) { json_delete(top); return; }
+    json_object_set_new_nocheck(top, "responses", responses);
 
-    //
-    //  ip/host
-    //  todo 응답 데이터 구성이 잘못된것 같은데 테스트 필요
-    // 
-    json_t* update = json_array();
-    json_array_append_new(updates, update);
-    json_array_append_new(update, json_string("ip"));
-    json_array_append_new(update, json_string("host"));
+    json_t *respond = json_object();
+    if (!respond) { json_delete(top); return; }    
+    json_array_append_new(responses, respond);
 
+    {
+        //
+        //  responses > response[]
+        // 
+       
+        json_object_set_nocheck(respond, "rid", rid);
+        json_object_set_new_nocheck(respond, "stream", json_string("closed"));
+        
+        //
+        //  columns
+        //   /new 노드를 생성할때 $columns 메타데이터를 설정했기때문에 
+        //   response 에 보낼 필요없다. 
+        // 
+        // json_t *columns = json_array();
+        // if (!columns){ json_delete(top); return; }
+        // json_object_set_new_nocheck(respond, "columns", columns);
 
-    json_object_set_new_nocheck(resp, "updates", updates);
+        // json_t *column_ip = json_object();
+        // if (!column_ip){ json_delete(top); return; }
+        // json_object_set_new(column_ip, "name", json_string("ip"));
+        // json_object_set_new(column_ip, "type", json_string("string"));
+        // json_array_append_new(columns, column_ip);
 
-    json_array_append_new(resps, resp);
+        // json_t *column_host = json_object();
+        // if (!column_ip){ json_delete(top); return; }
+        // json_object_set_new(column_host, "name", json_string("host"));
+        // json_object_set_new(column_host, "type", json_string("string"));    
+        // json_array_append_new(columns, column_host);
 
-    json_object_set_new_nocheck(resp, "stream", json_string("closed"));
-    json_object_set_nocheck(resp, "rid", rid);
+        //
+        //  updates
+        // 
+        json_t *updates = json_array();
+        if (!updates){ json_delete(top); return; }
+        json_object_set_new_nocheck(respond, "updates", updates);
+
+        json_t* update = json_array();
+        if (!updates){ json_delete(top); return; }
+        json_array_append_new(updates, update);
+
+        json_array_append_new(update, json_string(ip));
+        json_array_append_new(update, json_string(host_name));
+    }   
+
 
     #ifdef MYDBG
     {
-        log_info("params = \nip=%s, host=%s \n",ip, host);
-
-        char* data = json_dumps(resp, JSON_INDENT(2));
+                char* data = json_dumps(top, JSON_INDENT(2));
         log_info ("resps = \n%s \n", data);
         dslink_free(data);
     }
@@ -145,6 +161,7 @@ invoke_new_connection(
 
     dslink_ws_send_obj((struct wslay_event_context *) link->_ws, top);
     json_delete(top);
+    return;
 }
 
 
@@ -152,14 +169,8 @@ invoke_new_connection(
 
 
 /// @brief  
-void eip_responder_init(DSLink *link, DSNode *root) {
-    
-    //
-    // todo. 
-    //      코드 중간에 에러가 발생한 경우 리소스 릭이 발생할 수 있다. 
-    //      꼼꼼히 따져보자. 
-    // 
-
+void eip_responder_init(DSLink *link, DSNode *root) 
+{
     DSNode *connections = dslink_node_create(root, "connections", "node");
     if (!connections) {
         log_warn("Failed to create the connections node\n");
@@ -176,9 +187,9 @@ void eip_responder_init(DSLink *link, DSNode *root) {
     }
 
     //
-    //  `/connections/new` action node 를 생성하고, invoke 핸들러를 등록한다. 
-    // 
-    DSNode *new_connection = dslink_node_create(connections, "new", "node");
+    //  `/new` action node 를 생성하고, invoke 핸들러를 등록한다. 
+    //     
+    DSNode *new_connection = dslink_node_create(connections->parent, "new", "node");
     if (!new_connection) {
         log_warn("Failed to create new_connection action node\n");
         return;
@@ -189,7 +200,7 @@ void eip_responder_init(DSLink *link, DSNode *root) {
     dslink_node_set_meta(link, new_connection, "$invokable", json_string("read"));
 
     //
-    //  action 의 response stream 구조를 정의한다. 
+    //  action 의 $columns 를 정의한다. 
     //  
     json_t *columns = json_array();
     json_t *column_ip = json_object();
@@ -224,7 +235,7 @@ void eip_responder_init(DSLink *link, DSNode *root) {
 
     /// Host name
     json_t *param_host = json_object();
-    json_object_set_new(param_host, "name", json_string("host"));
+    json_object_set_new(param_host, "name", json_string("port"));
     json_object_set_new(param_host, "type", json_string("string"));    
     json_array_append_new(params, param_host);
 
